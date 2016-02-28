@@ -8,13 +8,7 @@
     attach: function(context) {
       var $context = $(context);
 
-      if (Drupal.wysiwyg != undefined) {
-        $.each(Drupal.wysiwyg.editor.init, function(editor) {
-          if (typeof ml[editor] == 'function') {
-            ml[editor]();
-          }
-        });
-      } else if (drupalSettings.ckeditor != undefined && typeof(CKEDITOR) != 'undefined') {
+      if (Drupal.ckeditor != undefined) {
         ml.ckeditor();
       }
 
@@ -32,12 +26,12 @@
       });
     },
     detach: function(context, settings) {
-        var $context = $(context);
-        $context.find('.maxlength').removeOnce('maxlength').each(function () {
-          $(this).charCount({
-            action: 'detach'
-          });
+      var $context = $(context);
+      $context.find('.maxlength').removeOnce('maxlength').each(function () {
+        $(this).charCount({
+          action: 'detach'
         });
+      });
     }
   };
 
@@ -130,17 +124,17 @@
     input = ml.twochar_lineending(input);
     // We do want that the space characters to count as 1, not 6...
     input = input.replace('&nbsp;', ' ');
-     //input = input.split(' ').join('');
+    //input = input.split(' ').join('');
     // Strips HTML and PHP tags from a string
-     allowed = (((allowed || "") + "")
-         .toLowerCase()
-         .match(/<[a-z][a-z0-9]*>/g) || [])
-         .join(''); // making sure the allowed arg is a string containing only tags in lowercase (<a><b><c>)
-     var tags = /<\/?([a-z][a-z0-9]*)\b[^>]*>/gi,
-         commentsAndPhpTags = /<!--[\s\S]*?-->|<\?(?:php)?[\s\S]*?\?>/gi;
-     return input.replace(commentsAndPhpTags, '').replace(tags, function($0, $1){
-         return allowed.indexOf('<' + $1.toLowerCase() + '>') > -1 ? $0 : '';
-     });
+    allowed = (((allowed || "") + "")
+        .toLowerCase()
+        .match(/<[a-z][a-z0-9]*>/g) || [])
+        .join(''); // making sure the allowed arg is a string containing only tags in lowercase (<a><b><c>)
+    var tags = /<\/?([a-z][a-z0-9]*)\b[^>]*>/gi,
+        commentsAndPhpTags = /<!--[\s\S]*?-->|<\?(?:php)?[\s\S]*?\?>/gi;
+    return input.replace(commentsAndPhpTags, '').replace(tags, function($0, $1){
+      return allowed.indexOf('<' + $1.toLowerCase() + '>') > -1 ? $0 : '';
+    });
   };
 
   /**
@@ -195,7 +189,7 @@
             //We are here, then the tag is closed, so just remove the
             //remaining ">" character.
             if (text.length > 0) {
-             result_html += text.charAt(0).toString();
+              result_html += text.charAt(0).toString();
             }
           } else {
             // In this case, we have an ending tag.
@@ -211,7 +205,7 @@
               text = text.substring(1);
             }
             if (text.length > 0) {
-             result_html = result_html + text.charAt(0).toString();
+              result_html = result_html + text.charAt(0).toString();
             }
             // Pop the last element from the tags stack and compare it with
             // the tag name.
@@ -284,84 +278,6 @@
     });
 
   };
-
-  /**
-   * Integrate with WYSIWYG
-   * Detect changes on editors and invoke ml.calculate()
-   */
-  ml.tinymce = function() {
-    // We only run it once
-    var onlyOnce = false;
-    if (!onlyOnce) {
-      onlyOnce = true;
-      tinyMCE.onAddEditor.add(function(mgr,ed) {
-          // the editor is on a maxlength field
-          var editor = $('#' + ed.editorId + '.maxlength');
-          if (editor.length == 1) {
-            if (editor.hasClass('maxlength_js_enforce')) {
-              ml.options[ed.editorId].enforce = true;
-            } else {
-              ml.options[ed.editorId].enforce = false;
-            }
-            // Check if we should strip the tags when counting.
-            if (editor.hasClass('maxlength_js_truncate_html')) {
-              ml.options[ed.editorId].truncateHtml = true;
-            } else {
-              ml.options[ed.editorId].truncateHtml = false;
-            }
-            ed.onChange.add(function(ed, l) {
-              ml.tinymceChange(ed);
-            });
-            ed.onKeyUp.add(function(ed, e) {
-              ml.tinymceChange(ed);
-            });
-            ed.onPaste.add(function(ed, e) {
-              setTimeout(function(){ml.tinymceChange(ed)}, 500);
-            });
-          }
-      });
-    }
-  }
-  // Invoke ml.calculate() for editor
-  ml.tinymceChange = function(ed) {
-    // CLone to avoid changing defaults
-    var options = $.extend({}, ml.options[ed.editorId]);
-    /* The following lines take the text from the wysiwyg and
-      strip out some html and special characters so an accurate character
-      count can be taken. */
-    var bodyContent = ml.tinymceGetData(ed);
-    bodyContent = bodyContent.replace(/&gt;/g, ' ');
-    bodyContent = bodyContent.replace(/&lt;/g, ' ');
-    bodyContent = bodyContent.replace(/&amp;/g, ' ');
-    bodyContent = bodyContent.replace(/<\/?[^>]+(>|$)/g, "");
-    bodyContent = bodyContent.replace(/\<p>/g, "");
-    bodyContent = bodyContent.replace(/\<\/p>/g, "");
-    bodyContent = bodyContent.replace(/[\n\r]/g, '');
-    bodyContent = bodyContent.replace(/&amp;/g, '&');
-    bodyContent = bodyContent.replace(/&nbsp;/g, ' ');
-    bodyContent = bodyContent.replace(/\<span>/g, ' ');
-    bodyContent = bodyContent.replace(/\<\/span>/g, ' ');
-    bodyContent = bodyContent.replace(/\<br>/g, ' ');
-    bodyContent = bodyContent.replace(/\<BR>/g, ' ');
-    bodyLength = bodyContent.length;
-
-    if (options.truncateHtml){
-      ml.calculate($(ed.getElement()), options, bodyLength, 'tinymceGetData', 'tinymceSetData');
-    }
-    else {
-      ml.calculate($(ed.getElement()), options, bodyLength, ed, 'tinymceGetData', 'tinymceSetData');
-    }
-  };
-
-  // Gets the data from the tinyMCE. Not tested yet.
-  ml.tinymceGetData = function(e) {
-    return e.getContent();
-  }
-
-  // Sets the data into a tinyMCE. Not tested yet.
-  ml.tinymceSetData = function(e, data) {
-    e.setContent(data);
-  }
 
   /**
    * Integrate with ckEditor
