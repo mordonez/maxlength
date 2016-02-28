@@ -1,0 +1,8 @@
+maxlength:
+  version: VERSION
+  js:
+    js/maxlength.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
