@@ -1,11 +1,11 @@
-(function($) {
+(function ($) {
 
   // Make evrything local
   var ml = ml || {};
   ml.options = ml.options || {};
 
   Drupal.behaviors.maxlength = {
-    attach: function(context) {
+    attach: function (context) {
       var $context = $(context);
 
       if (Drupal.ckeditor != undefined) {
@@ -25,7 +25,7 @@
         $this.charCount(options);
       });
     },
-    detach: function(context, settings) {
+    detach: function (context, settings) {
       var $context = $(context);
       $context.find('.maxlength').removeOnce('maxlength').each(function () {
         $(this).charCount({
@@ -50,11 +50,11 @@
    *    In case obj.val() wouldn't return the text to count, this should
    *    be passed with the number of characters.
    */
-  ml.calculate = function(obj, options, count, wysiwyg, getter, setter) {
+  ml.calculate = function (obj, options, count, wysiwyg, getter, setter) {
     var counter = $('#' + obj.attr('id') + '-' + options.css);
     var limit = parseInt(obj.attr('maxlength'));
 
-    if (count == undefined) {
+    if (count === undefined) {
       if (options.truncateHtml) {
         count = ml.strip_tags(obj.val()).length;
       }
@@ -77,7 +77,7 @@
       // Trim text.
       if (options.enforce) {
         if (wysiwyg != undefined) {
-          if (typeof ml[getter] == 'function' && typeof ml[setter] == 'function') {
+          if (typeof ml[getter] === 'function' && typeof ml[setter] === 'function') {
             if (options.truncateHtml) {
               var new_html = ml.truncate_html(ml[getter](wysiwyg), limit)
               ml[setter](wysiwyg, new_html);
@@ -115,11 +115,11 @@
    *
    * @see http://www.sitepoint.com/blogs/2004/02/16/line-endings-in-javascript/
    */
-  ml.twochar_lineending = function(str) {
+  ml.twochar_lineending = function (str) {
     return str.replace(/(\r\n|\r|\n)/g, "\r\n");
   };
 
-  ml.strip_tags = function(input, allowed) {
+  ml.strip_tags = function (input, allowed) {
     // making the lineendings with two chars
     input = ml.twochar_lineending(input);
     // We do want that the space characters to count as 1, not 6...
@@ -127,12 +127,12 @@
     //input = input.split(' ').join('');
     // Strips HTML and PHP tags from a string
     allowed = (((allowed || "") + "")
-        .toLowerCase()
-        .match(/<[a-z][a-z0-9]*>/g) || [])
-        .join(''); // making sure the allowed arg is a string containing only tags in lowercase (<a><b><c>)
+      .toLowerCase()
+      .match(/<[a-z][a-z0-9]*>/g) || [])
+      .join(''); // making sure the allowed arg is a string containing only tags in lowercase (<a><b><c>)
     var tags = /<\/?([a-z][a-z0-9]*)\b[^>]*>/gi,
-        commentsAndPhpTags = /<!--[\s\S]*?-->|<\?(?:php)?[\s\S]*?\?>/gi;
-    return input.replace(commentsAndPhpTags, '').replace(tags, function($0, $1){
+      commentsAndPhpTags = /<!--[\s\S]*?-->|<\?(?:php)?[\s\S]*?\?>/gi;
+    return input.replace(commentsAndPhpTags, '').replace(tags, function ($0, $1){
       return allowed.indexOf('<' + $1.toLowerCase() + '>') > -1 ? $0 : '';
     });
   };
@@ -140,7 +140,7 @@
   /**
    * Cuts a html text up to limit characters. Still experimental.
    */
-  ml.truncate_html = function(text, limit) {
+  ml.truncate_html = function (text, limit) {
     // The html result after cut.
     var result_html = '';
     // The text result, that will actually used when counting characters.
@@ -163,7 +163,7 @@
               // to the visible text, only to the html.
               result_html += first_char;
               // Also, check if we have a valid tag name.
-              if (!tag_name_completed && first_char == ' ') {
+              if (!tag_name_completed && first_char === ' ') {
                 // We have the tag name, so push it into the stack.
                 tag_name_completed = true;
                 tags_open.push(tag_name);
@@ -174,7 +174,7 @@
               }
               //If we have the combination "/>" it means that the tag
               //is closed, so remove it from the open tags stack.
-              if (first_char == '/' && text.length > 1 && text.charAt(1) == '>') {
+              if (first_char === '/' && text.length > 1 && text.charAt(1) === '>') {
                 tags_open.pop();
               }
               //Done with this char, remove it from the original text.
@@ -238,7 +238,7 @@
     return result_html;
   }
 
-  $.fn.charCount = function(options) {
+  $.fn.charCount = function (options) {
     // default configuration properties
     var defaults = {
       warning: 10,
@@ -255,7 +255,7 @@
     var options = $.extend(defaults, options);
     ml.options[$(this).attr('id')] = options;
 
-    if (options.action == 'detach') {
+    if (options.action === 'detach') {
       $(this).removeOnce('maxlength');
       $('#' + $(this).attr('id') + '-' + options.css).remove();
       delete ml.options[$(this).attr('id')];
@@ -270,10 +270,10 @@
     }
 
     ml.calculate($(this), options);
-    $(this).keyup(function() {
+    $(this).keyup(function () {
       ml.calculate($(this), options);
     });
-    $(this).change(function() {
+    $(this).change(function () {
       ml.calculate($(this), options);
     });
 
@@ -283,14 +283,14 @@
    * Integrate with ckEditor
    * Detect changes on editors and invoke ml.calculate()
    */
-  ml.ckeditor = function() {
+  ml.ckeditor = function () {
     // We only run it once
     var onlyOnce = false;
     if (!onlyOnce) {
       onlyOnce = true;
-      CKEDITOR.on('instanceReady', function(e) {
+      CKEDITOR.on('instanceReady', function (e) {
         var editor = $('#' + e.editor.name + '.maxlength');
-        if (editor.length == 1) {
+        if (editor.length === 1) {
           if (editor.hasClass('maxlength_js_enforce')) {
             ml.options[e.editor.element.getId()].enforce = true;
           } else {
@@ -303,21 +303,21 @@
             ml.options[e.editor.element.getId()].truncateHtml = false;
           }
           // Add the events on the editor.
-          e.editor.on('key', function(e) {
-            setTimeout(function(){ml.ckeditorChange(e)}, 100);
+          e.editor.on('key', function (e) {
+            setTimeout(function (){ml.ckeditorChange(e)}, 100);
           });
-          e.editor.on('paste', function(e) {
-            setTimeout(function(){ml.ckeditorChange(e)}, 500);
+          e.editor.on('paste', function (e) {
+            setTimeout(function (){ml.ckeditorChange(e)}, 500);
           });
-          e.editor.on('elementsPathUpdate', function(e) {
-            setTimeout(function(){ml.ckeditorChange(e)}, 100);
+          e.editor.on('elementsPathUpdate', function (e) {
+            setTimeout(function (){ml.ckeditorChange(e)}, 100);
           });
         }
       });
     }
   }
   // Invoke ml.calculate() for editor
-  ml.ckeditorChange = function(e) {
+  ml.ckeditorChange = function (e) {
     // Clone to avoid changing defaults
     var options = $.extend({}, ml.options[e.editor.element.getId()]);
     if (options.truncateHtml){
@@ -329,12 +329,12 @@
   };
 
   // Gets the data from the ckeditor.
-  ml.ckeditorGetData = function(e) {
+  ml.ckeditorGetData = function (e) {
     return e.editor.getData();
   }
 
   // Sets the data into a ckeditor.
-  ml.ckeditorSetData = function(e, data) {
+  ml.ckeditorSetData = function (e, data) {
     e.editor.setData(data);
   }
 
