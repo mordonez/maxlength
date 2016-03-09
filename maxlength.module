@@ -7,9 +7,6 @@
  */
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Component\Utility\Unicode;
-use Drupal\node\NodeTypeInterface;
-use Drupal\Component\Utility\Xss;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Field\WidgetInterface;
@@ -47,9 +44,15 @@ function maxlength_element_info_alter(&$cache) {
  * Pre render function to set maxlength attributes.
  */
 function maxlength_pre_render($element) {
-  if (((isset($element['#attributes']['maxlength']) && $element['#attributes']['maxlength'] > 0)) && isset($element['#maxlength_js']) && $element['#maxlength_js'] === TRUE) {
-    $element['#attributes']['class'][] = 'maxlength';
-    $element['#attached']['library'][] = 'maxlength/maxlength';
+  if (isset($element['#maxlength_js']) && $element['#maxlength_js'] === TRUE) {
+    if (((isset($element['#attributes']['maxlength']) && $element['#attributes']['maxlength'] > 0)) ) {
+      $element['#attributes']['class'][] = 'maxlength';
+      $element['#attached']['library'][] = 'maxlength/maxlength';
+    }
+    if (((isset($element['summary']['#attributes']['maxlength']) && $element['summary']['#attributes']['maxlength'] > 0))) {
+      $element['summary']['#attributes']['class'][] = 'maxlength';
+      $element['summary']['#attached']['library'][] = 'maxlength/maxlength';
+    }
   }
   return $element;
 }
@@ -82,6 +85,40 @@ function maxlength_field_widget_third_party_settings_form(WidgetInterface $plugi
         '#description' => t('The text used in the Javascript message under the input, where "@limit", "@remaining" and "@count" are replaced by the appropriate numbers.'),
       );
     }
+    if (!empty($allowed_settings['summary_maxlength_setting'])) {
+      $element['maxlength_js_summary'] = array(
+        '#type' => 'number',
+        '#title' => t('Summary Maxlength JS'),
+        '#description' => t('The maximum length of the field in characters.'),
+        '#default_value' => $plugin->getThirdPartySetting('maxlength', 'maxlength_js_summary'),
+      );
+      $element['maxlength_js_label_summary'] = array(
+        '#type' => 'textarea',
+        '#rows' => 2,
+        '#title' => t('Summary count down message'),
+        '#default_value' => $plugin->getThirdPartySetting('maxlength', 'maxlength_js_label_summary', MAXLENGTH_DEFAULT_JS_LABEL),
+        '#description' => t('The text used in the Javascript message under the input, where "@limit", "@remaining" and "@count" are replaced by the appropriate numbers.'),
+      );
+    }
+    if (!empty($allowed_settings['truncate_setting'])) {
+      $element['maxlength_js_enforce'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Force text truncate'),
+        '#description' => t('Check this option if you want that the html (or the text) that the user inserts into the field to be truncated.'),
+        '#default_value' => $plugin->getThirdPartySetting('maxlength', 'maxlength_js_enforce'),
+      );
+      $element['maxlength_js_truncate_html'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Truncate html'),
+        '#description' => t('Check this option if the input field may contain html text and you want to truncate it safely. This will also overwrite the maxlength validation from core, so that it will strip the tags before checking the length.'),
+        '#default_value' => $plugin->getThirdPartySetting('maxlength', 'maxlength_js_truncate_html'),
+        '#states' => array(
+          'enabled' => array(
+            ':input[name="fields[' . $field_definition->getName() . '][settings_edit_form][third_party_settings][maxlength][maxlength_js_enforce]"]' => array('checked' => TRUE),
+          ),
+        ),
+      );
+    }
     return $element;
   }
 }
@@ -94,8 +131,19 @@ function maxlength_field_widget_settings_summary_alter(&$summary, $context) {
   $widget_settings = \Drupal::service('maxlength.widget_settings');
   $allowed_settings = $widget_settings->getAllowedSettings($plugin_id);
   if (!empty($allowed_settings)) {
+    if (!empty($allowed_settings['summary_maxlength_setting']) && $context['widget']->getThirdPartySetting('maxlength', 'maxlength_js_summary')) {
+      $summary [] = t('Maxlength JS - enabled for summary: @count', array('@count' => $context['widget']->getThirdPartySetting('maxlength', 'maxlength_js_summary')));
+    }
     if (!empty($allowed_settings['maxlength_setting']) && $context['widget']->getThirdPartySetting('maxlength', 'maxlength_js')) {
       $summary [] = t('Maxlength JS - enabled: @count', array('@count' => $context['widget']->getThirdPartySetting('maxlength', 'maxlength_js')));
+    }
+    if (!empty($allowed_settings['truncate_setting'])) {
+      if ($context['widget']->getThirdPartySetting('maxlength', 'maxlength_js_enforce')) {
+        $summary [] = t('Maxlength JS - force text truncate');
+      }
+      if ($context['widget']->getThirdPartySetting('maxlength', 'maxlength_js_truncate_html')) {
+        $summary [] = t('Maxlength JS - Truncate html');
+      }
     }
   }
 }
@@ -109,6 +157,15 @@ function maxlength_field_widget_form_alter(&$element, \Drupal\Core\Form\FormStat
     $element['#maxlength_js'] = TRUE;
     $element['value']['#maxlength_js'] = TRUE;
 
+    if (isset($thirdPartySettings['maxlength']['maxlength_js_summary']) && $thirdPartySettings['maxlength']['maxlength_js_summary'] > 0) {
+      $maxlength_js = $thirdPartySettings['maxlength']['maxlength_js_summary'];
+      $element['summary']['#attributes']['maxlength'] = $maxlength_js;
+
+      $maxlength_js_label = !empty($thirdPartySettings['maxlength']['maxlength_js_label_summary']) ? $thirdPartySettings['maxlength']['maxlength_js_label_summary'] : MAXLENGTH_DEFAULT_JS_LABEL;
+      $maxlength_js_label = t($maxlength_js_label);
+      $element['summary']['#attributes']['maxlength_js_label'][] = $maxlength_js_label;
+    }
+
     if (isset($thirdPartySettings['maxlength']['maxlength_js']) && $thirdPartySettings['maxlength']['maxlength_js'] > 0) {
       $maxlength_js = $thirdPartySettings['maxlength']['maxlength_js'];
       $element['value']['#attributes']['maxlength'] = $maxlength_js;
@@ -118,10 +175,16 @@ function maxlength_field_widget_form_alter(&$element, \Drupal\Core\Form\FormStat
       $maxlength_js_label = t($maxlength_js_label);
       $element['#attributes']['maxlength_js_label'][] = $maxlength_js_label;
       $element['value']['#attributes']['maxlength_js_label'][] = $maxlength_js_label;
-
+    }
+    if (isset($thirdPartySettings['maxlength']['maxlength_js_enforce']) && $thirdPartySettings['maxlength']['maxlength_js_enforce']) {
+      $element['value']['#attributes']['#maxlength_js_enforce'] = TRUE;
+      $element['#attributes']['#maxlength_js_enforce'] = TRUE;
+    }
+    if (isset($thirdPartySettings['maxlength']['maxlength_js_truncate_html']) && $thirdPartySettings['maxlength']['maxlength_js_truncate_html']) {
+      $element['value']['#attributes']['#maxlength_js_truncate_html'] = TRUE;
+      $element['#attributes']['#maxlength_js_truncate_html'] = TRUE;
     }
   }
-
 }
 
 /**
@@ -131,9 +194,11 @@ function maxlength_field_widget_form_alter(&$element, \Drupal\Core\Form\FormStat
  * @return
  */
 function maxlength_process_element($element, FormStateInterface $form_state) {
-  if (isset($element['#maxlength_js_enforce']) && $element['#maxlength_js_enforce']) {
+  if (isset($element['#attributes']['#maxlength_js_enforce']) && $element['#attributes']['#maxlength_js_enforce']) {
     $element['#attributes']['class'][] = 'maxlength_js_enforce';
+  }
+  if (isset($element['#attributes']['#maxlength_js_truncate_html']) && $element['#attributes']['#maxlength_js_truncate_html']) {
+    $element['#attributes']['class'][] = 'maxlength_js_truncate_html';
   }
   return $element;
 }
-
