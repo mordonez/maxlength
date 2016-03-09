@@ -1,7 +1,0 @@
-entity_view_display.third_party.maxlength:
-  type: mapping
-  mapping:
-    maxlength_js:
-      type: integer
-    maxlength_js_label:
-      type: string
